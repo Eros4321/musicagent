@@ -11,18 +11,56 @@ def iso_now_z():
     return datetime.utcnow().replace(tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def extract_user_message(data: dict) -> str:
+    """
+    Extract the user query text from various possible payload formats.
+    Supports:
+    - Simple {"message": "..."}
+    - A2A {"params": {"message": {"parts": [...]}}}
+    """
+    # Direct message or query
+    if "message" in data and isinstance(data["message"], str):
+        return data["message"]
+
+    # Telex-style A2A request
+    try:
+        parts = data["params"]["message"].get("parts", [])
+        texts = []
+
+        for part in parts:
+            if part.get("kind") == "text" and part.get("text"):
+                texts.append(part["text"])
+            elif part.get("kind") == "data":
+                for d in part.get("data", []):
+                    if d.get("kind") == "text" and d.get("text"):
+                        texts.append(d["text"])
+
+        # Join all text segments
+        if texts:
+            return " ".join(texts)
+    except Exception:
+        pass
+
+    # Fallback
+    return data.get("query", "") or ""
+
+
 @csrf_exempt
 def music_agent_view(request):
     """
     A2A-compatible view that accepts JSON with a 'message' or 'query' field
-    and returns the full Telex-style response structure.
+    or Telex-style payload and returns the full response structure.
     """
     if request.method != "POST":
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
     try:
         data = json.loads(request.body.decode("utf-8"))
-        message = data.get("message") or data.get("query") or ""
+        message = extract_user_message(data).strip()
+
+        if not message:
+            return JsonResponse({"error": "No message provided"}, status=400)
+
         result = recommend_title_artist(message)
 
         # IDs and timestamp
@@ -74,5 +112,6 @@ def music_agent_view(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
+
 
 
