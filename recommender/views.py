@@ -35,13 +35,11 @@ def extract_user_message(data: dict) -> str:
                     if d.get("kind") == "text" and d.get("text"):
                         texts.append(d["text"])
 
-        # Join all text segments
         if texts:
             return " ".join(texts)
     except Exception:
         pass
 
-    # Fallback
     return data.get("query", "") or ""
 
 
@@ -64,18 +62,19 @@ def music_agent_view(request):
         result = recommend_title_artist(message)
 
         # IDs and timestamp
-        result_id = str(uuid.uuid4())
-        message_id = str(uuid.uuid4())
-        task_id = result_id
-        artifact_id = str(uuid.uuid4())
+        task_id = f"task-{uuid.uuid4()}"
+        message_id = f"msg-{uuid.uuid4()}"
+        context_id = f"ctx-{uuid.uuid4()}"
+        artifact_id = f"artifact-{uuid.uuid4()}"
         timestamp = iso_now_z()
 
         # Build the response
         response = {
             "jsonrpc": "2.0",
-            "id": result_id,
+            "id": str(uuid.uuid4()),
             "result": {
-                "id": result_id,
+                "id": task_id,
+                "contextId": context_id,
                 "status": {
                     "state": "completed",
                     "timestamp": timestamp,
@@ -85,11 +84,14 @@ def music_agent_view(request):
                         "parts": [
                             {
                                 "kind": "text",
-                                "text": f"🎵 *{result['title']}* by {result['artist']}"
+                                "text": f"🎵 *{result['title']}* by {result['artist']}",
+                                "data": None,
+                                "file_url": None
                             }
                         ],
                         "messageId": message_id,
-                        "taskId": task_id
+                        "taskId": task_id,
+                        "metadata": None
                     }
                 },
                 "artifacts": [
@@ -99,19 +101,52 @@ def music_agent_view(request):
                         "parts": [
                             {
                                 "kind": "text",
-                                "text": f"{result['title']} — {result['artist']}"
+                                "text": f"{result['title']} — {result['artist']}",
+                                "data": None,
+                                "file_url": None
                             }
                         ]
                     }
                 ],
+                "history": [
+                    {
+                        "kind": "message",
+                        "role": "user",
+                        "parts": [
+                            {
+                                "kind": "text",
+                                "text": message,
+                                "data": None,
+                                "file_url": None
+                            }
+                        ],
+                        "messageId": f"msg-{uuid.uuid4()}",
+                        "taskId": None,
+                        "metadata": None
+                    },
+                    {
+                        "kind": "message",
+                        "role": "agent",
+                        "parts": [
+                            {
+                                "kind": "text",
+                                "text": f"🎵 *{result['title']}* by {result['artist']}",
+                                "data": None,
+                                "file_url": None
+                            }
+                        ],
+                        "messageId": message_id,
+                        "taskId": task_id,
+                        "metadata": None
+                    }
+                ],
                 "kind": "task"
-            }
+            },
+            "error": None
         }
 
         return JsonResponse(response, safe=False, status=200)
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
-
-
 
