@@ -7,7 +7,7 @@ from .ai_agent import recommend_title_artist
 def music_agent_view(request):
     """
     A2A-compatible view that accepts JSON with a 'message' or 'query' field
-    and returns { "title": ..., "artist": ..., "status": "success" }.
+    and returns { "title": ..., "artist": ... }.
     """
     if request.method != "POST":
         return JsonResponse({"error": "Only POST allowed"}, status=405)
@@ -17,12 +17,12 @@ def music_agent_view(request):
         message = data.get("message") or data.get("query") or ""
         result = recommend_title_artist(message)
 
-        # Return directly, not nested in "response"
+        # A2A-compatible format
         return JsonResponse({
-            "title": result.get("title"),
-            "artist": result.get("artist"),
+            "response": result,
             "status": "success"
         })
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
+
