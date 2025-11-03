@@ -1,0 +1,6 @@
+Django
+djangorestframework
+requests
+python-dotenv
+openai
+gunicorn
