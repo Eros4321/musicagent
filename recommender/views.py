@@ -49,6 +49,13 @@ def music_agent_view(request):
     A2A-compatible view that accepts JSON with a 'message' or 'query' field
     or Telex-style payload and returns the full response structure.
     """
+    # Allow GET for Telex endpoint validation
+    if request.method == "GET":
+        return JsonResponse({
+            "status": "ok",
+            "message": "Music agent endpoint is active and ready."
+        }, status=200)
+
     if request.method != "POST":
         return JsonResponse({"error": "Only POST allowed"}, status=405)
 
@@ -68,7 +75,7 @@ def music_agent_view(request):
         artifact_id = f"artifact-{uuid.uuid4()}"
         timestamp = iso_now_z()
 
-        # Build the response
+        # Build the response (same as before)
         response = {
             "jsonrpc": "2.0",
             "id": str(uuid.uuid4()),
@@ -149,4 +156,3 @@ def music_agent_view(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
-
